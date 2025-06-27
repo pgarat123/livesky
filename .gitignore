@@ -1,5 +1,9 @@
-#IDE files
+# IDE files
 .idea/
 
-#OS files
+# OS files
 .DS_Store
+
+# Local build for the docs website
+venv/
+site/
