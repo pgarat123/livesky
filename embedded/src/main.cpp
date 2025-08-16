@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include "DFRobot_LarkWeatherStation.h"
+#include "connectivity.h"
+#include "WiFiManager.h"
 #define DEVICE_ADDR                  0x42
 DFRobot_LarkWeatherStation_I2C lark(DEVICE_ADDR,&Wire);
 
@@ -12,6 +14,8 @@ void setup(void){
     }
     Serial.println("init success");
     lark.setTime(2023,3,1,17,20,0);
+    connectivitySetup();
+
 }
 
 void loop(void){
