@@ -1,0 +1,35 @@
+
+services:
+  # Backend (API)
+  backend:
+    build: ./backend
+    platform: linux/arm64/v8
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/mydatabase
+
+  # Frontend (Dashboard)
+  frontend:
+    build: ./frontend
+    platform: linux/arm64/v8
+    ports:
+      - "8080:80"
+
+  # DB
+  db:
+    image: postgres:14-alpine
+    platform: linux/arm64/v8
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
