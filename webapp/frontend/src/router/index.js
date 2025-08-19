@@ -17,6 +17,11 @@ const router = createRouter({
       component: DeviceDetailView,
     },
     {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting

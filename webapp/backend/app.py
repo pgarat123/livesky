@@ -116,6 +116,50 @@ def get_data():
     return jsonify(data_list)
 
 
+@app.route('/api/devices', methods=['GET'])
+def get_devices():
+    devices = Device.query.order_by(Device.device_id).all()
+    devices_list = [
+        {
+            "device_id": device.device_id,
+            "device_name": device.device_name,
+            "location_name": device.location.location_name
+        } for device in devices
+    ]
+    return jsonify(devices_list)
+
+@app.route('/api/devices/<int:device_id>', methods=['PUT'])
+def update_device(device_id):
+    device = Device.query.get_or_404(device_id)
+    data = request.get_json()
+
+    if 'device_name' in data:
+        device.device_name = data['device_name']
+    
+    # Optionnel : Gérer le changement de lieu
+    if 'location_name' in data:
+        location = Location.query.filter_by(location_name=data['location_name']).first()
+        if not location:
+            # Créer le lieu s'il n'existe pas
+            location = Location(location_name=data['location_name'])
+            db.session.add(location)
+        device.location = location
+
+    db.session.commit()
+    return jsonify({"message": f"Appareil '{device.device_name}' mis à jour."})
+
+@app.route('/api/devices/<int:device_id>', methods=['DELETE'])
+def delete_device(device_id):
+    device = Device.query.get_or_404(device_id)
+    
+    # Supprimer d'abord toutes les lectures de capteurs associées
+    SensorReading.query.filter_by(device_id=device_id).delete()
+    
+    db.session.delete(device)
+    db.session.commit()
+    return jsonify({"message": f"Appareil ID {device_id} et ses données supprimés."})
+
+
 @app.route('/api/devices/<int:device_id>/history', methods=['GET'])
 def get_device_history(device_id):
     sensor_type = request.args.get('sensor', 'temperature', type=str)
