@@ -3,6 +3,9 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement } from 'chart.js'
+import vSelect from 'vue-select'
+import 'vue-select/dist/vue-select.css';
+import VueFeather from 'vue-feather';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement)
 
@@ -15,11 +18,18 @@ const selectedRange = ref(24)
 const chartDataRaw = ref({ labels: [], data: [] })
 const loading = ref(true)
 
+const sensorIcons = {
+  temperature: 'thermometer',
+  humidity: 'droplet',
+  pressure: 'activity',
+  wind_speed: 'wind',
+};
+
 const sensorOptions = [
-  { value: 'temperature', text: '🌡️ Température' },
-  { value: 'humidity', text: '💧 Humidité' },
-  { value: 'pressure', text: '🌬️ Pression' },
-  { value: 'wind_speed', text: '💨 Vitesse du vent' },
+  { value: 'temperature', text: 'Température' },
+  { value: 'humidity', text: 'Humidité' },
+  { value: 'pressure', text: 'Pression' },
+  { value: 'wind_speed', text: 'Vitesse du vent' },
 ]
 const rangeOptions = [
   { value: 1, text: 'Dernière heure' },
@@ -43,17 +53,22 @@ const fetchChartData = async () => {
 const chartData = computed(() => ({
   labels: chartDataRaw.value.labels.map(ts => new Date(ts).toLocaleTimeString()),
   datasets: [{
-    label: sensorOptions.find(opt => opt.value === selectedSensor.value).text,
+    label: sensorOptions.find(opt => opt.value === selectedSensor.value)?.text || selectedSensor.value,
     backgroundColor: '#f87979',
     borderColor: '#f87979',
     data: chartDataRaw.value.data,
   }]
 }))
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
-  maintainAspectRatio: false
-}
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      grace: '10%' // Ajoute 10% de marge en haut et en bas de l'échelle
+    }
+  }
+}))
 
 watch(selectedSensor, fetchChartData)
 watch(selectedRange, fetchChartData)
@@ -68,19 +83,40 @@ onMounted(fetchChartData)
     <div class="controls">
       <div class="control-group">
         <label for="sensor-select">Capteur :</label>
-        <select id="sensor-select" v-model="selectedSensor">
-          <option v-for="option in sensorOptions" :key="option.value" :value="option.value">
-            {{ option.text }}
-          </option>
-        </select>
+        <v-select
+            id="sensor-select"
+            v-model="selectedSensor"
+            :options="sensorOptions"
+            :reduce="option => option.value"
+            label="text"
+            :clearable="false"
+            :searchable="false"
+        >
+          <template #option="{ text, value }">
+            <span class="select-option">
+              <vue-feather :type="sensorIcons[value]" size="16"></vue-feather>
+              <span>{{ text }}</span>
+            </span>
+          </template>
+          <template #selected-option="{ text, value }">
+             <span class="select-option">
+              <vue-feather :type="sensorIcons[value]" size="16"></vue-feather>
+              <span>{{ text }}</span>
+            </span>
+          </template>
+        </v-select>
       </div>
       <div class="control-group">
         <label for="range-select">Période :</label>
-        <select id="range-select" v-model="selectedRange">
-          <option v-for="option in rangeOptions" :key="option.value" :value="option.value">
-            {{ option.text }}
-          </option>
-        </select>
+        <v-select
+            id="range-select"
+            v-model="selectedRange"
+            :options="rangeOptions"
+            :reduce="option => option.value"
+            label="text"
+            :clearable="false"
+            :searchable="false"
+        ></v-select>
       </div>
     </div>
 
@@ -91,6 +127,25 @@ onMounted(fetchChartData)
     </div>
   </main>
 </template>
+
+<style>
+/* Global override for vue-select */
+:root {
+  --vs-dropdown-option--active-bg: #f0f0f0;
+  --vs-dropdown-option--active-color: #333;
+}
+
+.vs__dropdown-toggle {
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+</style>
 
 <style scoped>
 main {
@@ -104,17 +159,29 @@ main {
 .control-group {
   display: flex;
   flex-direction: column;
+  min-width: 250px; /* Give select some base width */
 }
 .control-group label {
   margin-bottom: 0.5rem;
 }
-.control-group select {
-  padding: 0.5rem;
-  border-radius: 4px;
-}
+
 .chart-container {
   position: relative;
   height: 60vh;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  main {
+    padding: 1rem;
+  }
+  .controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .control-group {
+    min-width: auto;
+    width: 100%;
+  }
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import VueFeather from 'vue-feather';
 
 const sensorData = ref([])
 const API_BASE_URL = 'http://192.168.1.20:5001' // Temp not fixed IP
@@ -42,23 +43,38 @@ onUnmounted(() => {
           <p class="timestamp">{{ new Date(reading.timestamp).toLocaleString() }}</p>
           <ul>
             <li v-if="reading.temperature !== null">
-              <span>🌡️ Température:</span>
+              <span class="data-point">
+                <vue-feather type="thermometer" size="16"></vue-feather>
+                <span>Température:</span>
+              </span>
               <span>{{ reading.temperature }} °C</span>
             </li>
             <li v-if="reading.humidity !== null">
-              <span>💧 Humidité:</span>
+              <span class="data-point">
+                <vue-feather type="droplet" size="16"></vue-feather>
+                <span>Humidité:</span>
+              </span>
               <span>{{ reading.humidity }} %</span>
             </li>
             <li v-if="reading.pressure !== null">
-              <span>🌬️ Pression:</span>
+               <span class="data-point">
+                <vue-feather type="activity" size="16"></vue-feather>
+                <span>Pression:</span>
+              </span>
               <span>{{ reading.pressure }} hPa</span>
             </li>
             <li v-if="reading.wind_speed !== null">
-              <span>💨 Vitesse du vent:</span>
+              <span class="data-point">
+                <vue-feather type="wind" size="16"></vue-feather>
+                <span>Vitesse du vent:</span>
+              </span>
               <span>{{ reading.wind_speed }} km/h</span>
             </li>
             <li v-if="reading.wind_direction !== null">
-              <span>🧭 Direction du vent:</span>
+              <span class="data-point">
+                <vue-feather type="compass" size="16"></vue-feather>
+                <span>Direction du vent:</span>
+              </span>
               <span>{{ reading.wind_direction }}</span>
             </li>
           </ul>
@@ -124,11 +140,18 @@ main {
 .card-body li {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 0.5rem 0;
   border-bottom: 1px solid #eee;
 }
 
 .card-body li:last-child {
   border-bottom: none;
+}
+
+.data-point {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 </style>
