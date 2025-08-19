@@ -1,16 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const sensorData = ref([])
 const API_BASE_URL = 'http://192.168.1.20:5001' // Temp not fixed IP
+let pollingInterval = null
 
-onMounted(async () => {
+const fetchData = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/data`)
     sensorData.value = await response.json()
   } catch (error) {
     console.error('Erreur lors de la récupération des données:', error)
+    // Optionnel : vous pourriez vouloir arrêter le polling en cas d'erreur réseau persistante
+    // clearInterval(pollingInterval)
   }
+}
+
+onMounted(() => {
+  fetchData() // Premier chargement immédiat
+  pollingInterval = setInterval(fetchData, 10000) // Rafraîchit toutes les 10 secondes
+})
+
+onUnmounted(() => {
+  clearInterval(pollingInterval) // Nettoyage de l'intervalle à la destruction du composant
 })
 </script>
 
