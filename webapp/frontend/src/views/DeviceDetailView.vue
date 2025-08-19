@@ -129,14 +129,26 @@ onMounted(fetchChartData)
 </template>
 
 <style>
-/* Global override for vue-select */
-:root {
-  --vs-dropdown-option--active-bg: #f0f0f0;
-  --vs-dropdown-option--active-color: #333;
+/* Global override for vue-select to match the app's theme */
+.control-group {
+  --vs-controls-color: var(--color-text);
+  --vs-controls-bg: var(--color-background-soft);
+  --vs-border-color: var(--color-border);
+  --vs-border-radius: 4px;
+
+  --vs-dropdown-bg: var(--color-background-soft);
+  --vs-dropdown-color: var(--color-text);
+  --vs-dropdown-option-color: var(--color-text);
+
+  --vs-dropdown-option--active-bg: var(--color-background-mute);
+  --vs-dropdown-option--active-color: var(--color-heading);
+
+  --vs-search-input-color: var(--color-text);
+  --vs-selected-color: var(--color-heading);
+  --vs-line-height: 1.5;
 }
 
 .vs__dropdown-toggle {
-  border-radius: 4px;
   padding: 0.25rem 0.5rem;
 }
 

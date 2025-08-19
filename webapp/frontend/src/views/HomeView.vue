@@ -96,38 +96,47 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 2rem;
+  justify-content: center; /* Center cards horizontally */
 }
 
 .device-card {
   text-decoration: none;
-  color: inherit;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background-color: var(--color-background-soft);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   min-width: 300px;
-  background-color: #f9f9f9;
+  flex-grow: 1; /* Allow cards to grow */
+  max-width: 400px; /* But not too wide */
+  transition: border-color 0.3s, background-color 0.3s;
+}
+
+.device-card:hover {
+  border-color: var(--color-border-hover);
 }
 
 .card-header {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
 }
 
 .card-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--color-heading);
 }
 
 .card-header p {
   margin: 0;
-  color: #666;
+  color: var(--color-text);
 }
 
 .card-body .timestamp {
   font-size: 0.8em;
-  color: #888;
+  color: var(--color-text);
+  opacity: 0.8;
   margin-bottom: 1rem;
 }
 
@@ -142,7 +151,7 @@ main {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .card-body li:last-child {
@@ -153,5 +162,19 @@ main {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Stacking on mobile */
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .device-card {
+    width: 100%;
+    max-width: 450px; /* Adjust max-width for mobile if needed */
+  }
 }
 </style>
