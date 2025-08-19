@@ -8,13 +8,14 @@ DFRobot_LarkWeatherStation_I2C lark(DEVICE_ADDR,&Wire);
 void setup(void){
     Serial.begin(9600);
     delay(1000);
+    connectivitySetup();
     while(lark.begin()!= 0){
         Serial.println("init error");
         delay(1000);
     }
     Serial.println("init success");
     lark.setTime(2023,3,1,17,20,0);
-    connectivitySetup();
+
 
 }
 

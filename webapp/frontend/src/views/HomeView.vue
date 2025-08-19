@@ -5,7 +5,7 @@ const sensorData = ref([])
 
 onMounted(async () => {
   try {
-    const response = await fetch('http://localhost:5001/api/data')
+    const response = await fetch('http://192.168.1.20:5001/api/data')
     
     const data = await response.json()
     
