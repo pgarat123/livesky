@@ -86,23 +86,35 @@ def add_data():
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    readings = SensorReading.query.join(Device).order_by(SensorReading.timestamp.desc()).all()
+    latest_readings_subquery = db.session.query(
+        SensorReading.device_id,
+        db.func.max(SensorReading.timestamp).label('max_timestamp')
+    ).group_by(SensorReading.device_id).subquery()
+
+    readings = db.session.query(SensorReading).join(
+        latest_readings_subquery,
+        db.and_(
+            SensorReading.device_id == latest_readings_subquery.c.device_id,
+            SensorReading.timestamp == latest_readings_subquery.c.max_timestamp
+        )
+    ).order_by(SensorReading.timestamp.desc()).all()
+
     data_list = [
         {
             "id": reading.id,
             "device_id": reading.device.device_id,
-            "timestamp": reading.timestamp.isoformat() + 'Z',
-            "device_name": reading.device.device_name,
-            "location_name": reading.device.location.location_name,
-
             "temperature": reading.temperature,
             "humidity": reading.humidity,
             "pressure": reading.pressure,
             "wind_speed": reading.wind_speed,
-            "wind_direction": reading.wind_direction
+            "wind_direction": reading.wind_direction,
+            "timestamp": reading.timestamp.isoformat() + 'Z',
+            "device_name": reading.device.device_name,
+            "location_name": reading.device.location.location_name
         } for reading in readings
     ]
     return jsonify(data_list)
+
 
 @app.route('/api/devices/<int:device_id>/history', methods=['GET'])
 def get_device_history(device_id):
