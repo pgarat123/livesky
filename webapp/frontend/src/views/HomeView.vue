@@ -19,7 +19,7 @@ onMounted(async () => {
     <h1>Tableau de Bord Météo</h1>
 
     <div class="dashboard-container" v-if="sensorData.length > 0">
-      <div class="device-card" v-for="reading in sensorData" :key="reading.id">
+      <RouterLink :to="`/device/${reading.device_id}`" class="device-card" v-for="reading in sensorData" :key="reading.id">
 
         <div class="card-header">
           <h2>{{ reading.device_name }}</h2>
@@ -51,7 +51,7 @@ onMounted(async () => {
             </li>
           </ul>
         </div>
-      </div>
+      </RouterLink>
     </div>
     <div v-else>
       <p>Chargement des données ou aucune donnée disponible...</p>
@@ -71,6 +71,8 @@ main {
 }
 
 .device-card {
+  text-decoration: none;
+  color: inherit;
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 1rem;

@@ -14,7 +14,9 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "chart.js": "^4.5.0",
     "vue": "^3.5.18",
+    "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)
@@ -82,7 +82,7 @@ def add_data():
 
     db.session.add(new_reading)
     db.session.commit()
-    return jsonify({"message": "Donnée ajoutée"}), 201
+    return jsonify({"message": "Donnee ajoutee"}), 201
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
@@ -90,6 +90,7 @@ def get_data():
     data_list = [
         {
             "id": reading.id,
+            "device_id": reading.device.device_id,
             "timestamp": reading.timestamp.isoformat() + 'Z',
             "device_name": reading.device.device_name,
             "location_name": reading.device.location.location_name,
@@ -102,6 +103,30 @@ def get_data():
         } for reading in readings
     ]
     return jsonify(data_list)
+
+@app.route('/api/devices/<int:device_id>/history', methods=['GET'])
+def get_device_history(device_id):
+    sensor_type = request.args.get('sensor', 'temperature', type=str)
+    time_range_hours = request.args.get('range', 24, type=int)
+
+    valid_sensors = ['temperature', 'humidity', 'pressure', 'wind_speed', 'wind_direction']
+    if sensor_type not in valid_sensors:
+        return jsonify({"error": "Type de capteur non valide"}), 400
+
+    start_time = datetime.utcnow() - timedelta(hours=time_range_hours)
+
+    history = SensorReading.query.filter(
+        SensorReading.device_id == device_id,
+        SensorReading.timestamp >= start_time,
+        getattr(SensorReading, sensor_type).isnot(None)
+    ).order_by(SensorReading.timestamp.asc()).all()
+
+    response_data = {
+        "labels": [reading.timestamp.isoformat() + 'Z' for reading in history],
+        "data": [getattr(reading, sensor_type) for reading in history]
+    }
+
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
