@@ -42,7 +42,7 @@ const closeModal = () => {
       <div class="modal-body">
         <form @submit.prevent="saveChanges">
           <div class="form-group">
-            <label for="device-name">Nom de 'appareil</label>
+            <label for="device-name">Nom de l'appareil</label>
             <input type="text" id="device-name" v-model="formData.device_name" required>
           </div>
           <div class="form-group">
