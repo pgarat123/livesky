@@ -184,5 +184,63 @@ def get_device_history(device_id):
 
     return jsonify(response_data)
 
+
+@app.route('/api/admin/readings', methods=['GET'])
+def get_all_readings():
+    """
+    Admin route to get all sensor readings from all devices.
+    """
+    limit = request.args.get('limit', 50, type=int)
+    
+    readings = SensorReading.query.order_by(SensorReading.timestamp.desc()).limit(limit).all()
+    
+    data_list = [
+        {
+            "id": reading.id,
+            "device_id": reading.device.device_id,
+            "device_name": reading.device.device_name,
+            "temperature": reading.temperature,
+            "humidity": reading.humidity,
+            "pressure": reading.pressure,
+            "wind_speed": reading.wind_speed,
+            "wind_direction": reading.wind_direction,
+            "timestamp": reading.timestamp.isoformat() + 'Z',
+        } for reading in readings
+    ]
+    return jsonify(data_list)
+
+@app.route('/api/admin/devices/<int:device_id>/readings', methods=['GET'])
+def get_device_readings_for_admin(device_id):
+    """
+    Admin route to get all readings for a specific device.
+    """
+    limit = request.args.get('limit', 50, type=int)
+    
+    device = Device.query.get_or_404(device_id)
+    readings = SensorReading.query.filter_by(device_id=device.device_id).order_by(SensorReading.timestamp.desc()).limit(limit).all()
+    
+    data_list = [
+        {
+            "id": reading.id,
+            "timestamp": reading.timestamp.isoformat() + 'Z',
+            "temperature": reading.temperature,
+            "humidity": reading.humidity,
+            "pressure": reading.pressure,
+            "wind_speed": reading.wind_speed,
+            "wind_direction": reading.wind_direction,
+        } for reading in readings
+    ]
+    return jsonify(data_list)
+
+@app.route('/api/admin/readings/<int:reading_id>', methods=['DELETE'])
+def delete_reading(reading_id):
+    """
+    Admin route to delete a specific sensor reading.
+    """
+    reading = SensorReading.query.get_or_404(reading_id)
+    db.session.delete(reading)
+    db.session.commit()
+    return jsonify({"message": f"Reading ID {reading_id} has been deleted."})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

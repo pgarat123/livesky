@@ -71,16 +71,19 @@ const closeModal = () => {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  transition: opacity 0.3s ease;
 }
 
 .modal-container {
-  background: white;
+  background: var(--color-background-soft);
+  color: var(--color-text);
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.5);
   width: 90%;
   max-width: 500px;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s ease;
 }
 
 .modal-header {
@@ -88,11 +91,12 @@ const closeModal = () => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h2 {
   margin: 0;
+  color: var(--color-heading);
 }
 
 .close-button {
@@ -100,6 +104,11 @@ const closeModal = () => {
   background: transparent;
   font-size: 2rem;
   cursor: pointer;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+.close-button:hover {
+  opacity: 1;
 }
 
 .modal-body {
@@ -113,38 +122,56 @@ const closeModal = () => {
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
+  color: var(--color-text);
+  font-weight: 500;
 }
 
 .form-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-border-hover);
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-background-mute);
 }
 
 .btn {
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+  transition: background-color 0.2s ease;
 }
 
 .btn-primary {
   background-color: #007bff;
-  color: white;
+  color: var(--vt-c-white);
+}
+.btn-primary:hover {
+  background-color: #0056b3;
 }
 
 .btn-secondary {
   background-color: #6c757d;
-  color: white;
+  color: var(--vt-c-white);
+}
+.btn-secondary:hover {
+  background-color: #545b62;
 }
 </style>
