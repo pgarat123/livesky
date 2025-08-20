@@ -58,7 +58,7 @@ onUnmounted(() => {
             </li>
             <li v-if="reading.pressure !== null">
                <span class="data-point">
-                <vue-feather type="activity" size="16"></vue-feather>
+                <vue-feather type="target" size="16"></vue-feather>
                 <span>Pression:</span>
               </span>
               <span>{{ reading.pressure }} hPa</span>

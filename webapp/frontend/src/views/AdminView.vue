@@ -82,7 +82,7 @@ const handleDelete = async (deviceId) => {
 
     await fetchDevices(); // Refresh the list
   } catch (error) {
-    console.error(`Erreur lors de la suppression de l\'appareil ${deviceId}:`, error);
+    console.error(`Erreur lors de la suppression de lOk 'appareil ${deviceId}:`, error);
   }
 };
 </script>

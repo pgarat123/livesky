@@ -21,7 +21,7 @@ const loading = ref(true)
 const sensorIcons = {
   temperature: 'thermometer',
   humidity: 'droplet',
-  pressure: 'activity',
+  pressure: 'target',
   wind_speed: 'wind',
 };
 
@@ -50,25 +50,115 @@ const fetchChartData = async () => {
   }
 }
 
-const chartData = computed(() => ({
-  labels: chartDataRaw.value.labels.map(ts => new Date(ts).toLocaleTimeString()),
-  datasets: [{
-    label: sensorOptions.find(opt => opt.value === selectedSensor.value)?.text || selectedSensor.value,
-    backgroundColor: '#f87979',
-    borderColor: '#f87979',
-    data: chartDataRaw.value.data,
-  }]
-}))
+const chartData = computed(() => {
+  const now = new Date();
+  const rangeHours = selectedRange.value;
+  const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
+
+  let intervalMinutes;
+  if (rangeHours <= 1) intervalMinutes = 5;
+  else if (rangeHours <= 6) intervalMinutes = 15;
+  else if (rangeHours <= 24) intervalMinutes = 60;
+  else intervalMinutes = 6 * 60;
+  const intervalMillis = intervalMinutes * 60 * 1000;
+
+  const fullLabels = [];
+  let currentTime = new Date(Math.floor(startTime.getTime() / intervalMillis) * intervalMillis);
+  while (currentTime <= now) {
+    fullLabels.push(new Date(currentTime));
+    currentTime.setTime(currentTime.getTime() + intervalMillis);
+  }
+  if (fullLabels.length > 0 && fullLabels[fullLabels.length - 1] < now) {
+    fullLabels.push(currentTime);
+  }
+
+  const fullData = Array(fullLabels.length).fill(null);
+
+  if (chartDataRaw.value.labels && chartDataRaw.value.labels.length > 0) {
+    const dataPoints = chartDataRaw.value.labels.map((ts, i) => ({
+      time: new Date(ts).getTime(),
+      value: chartDataRaw.value.data[i]
+    }));
+
+    const buckets = Array.from({ length: fullLabels.length }, () => []);
+
+    dataPoints.forEach(point => {
+      let bucketIdx = -1;
+      for (let i = 0; i < fullLabels.length; i++) {
+          if (point.time >= fullLabels[i].getTime()) {
+              bucketIdx = i;
+          } else {
+              break;
+          }
+      }
+
+      if (bucketIdx !== -1) {
+        buckets[bucketIdx].push(point.value);
+      }
+    });
+
+    buckets.forEach((bucket, index) => {
+      if (bucket.length > 0) {
+        const sum = bucket.reduce((a, b) => a + b, 0);
+        fullData[index] = sum / bucket.length;
+      }
+    });
+  }
+
+  const formatLabel = (date) => {
+    if (rangeHours > 48) {
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  };
+
+  return {
+    labels: fullLabels.map(formatLabel),
+    datasets: [{
+      label: sensorOptions.find(opt => opt.value === selectedSensor.value)?.text || selectedSensor.value,
+      backgroundColor: '#f87979',
+      borderColor: '#f87979',
+      data: fullData,
+    }]
+  };
+});
 
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   scales: {
+    x: {
+      ticks: {
+        maxTicksLimit: 15 // Prevents the x-axis from getting too crowded
+      }
+    },
     y: {
       grace: '10%' // Ajoute 10% de marge en haut et en bas de l'échelle
     }
   }
 }))
+
+const selectedSensorUnit = computed(() => {
+  switch (selectedSensor.value) {
+    case 'temperature': return '°C';
+    case 'humidity': return '%';
+    case 'pressure': return 'hPa';
+    case 'wind_speed': return 'km/h';
+    default: return '';
+  }
+});
+
+const tableData = computed(() => {
+  if (!chartDataRaw.value.labels || chartDataRaw.value.labels.length === 0) {
+    return [];
+  }
+  return chartDataRaw.value.labels
+    .map((ts, index) => ({
+      timestamp: new Date(ts).toLocaleString(),
+      value: chartDataRaw.value.data[index]
+    }))
+    .reverse();
+});
 
 watch(selectedSensor, fetchChartData)
 watch(selectedRange, fetchChartData)
@@ -124,6 +214,24 @@ onMounted(fetchChartData)
       <Line v-if="!loading && chartData.datasets[0].data.length > 0" :data="chartData" :options="chartOptions" />
       <p v-if="loading">Chargement du graphique...</p>
       <p v-if="!loading && chartData.datasets[0].data.length === 0">Aucune donnée pour cette sélection.</p>
+    </div>
+
+    <div class="data-table-container" v-if="!loading && tableData.length > 0">
+      <h3>Relevés de données brutes</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Horodatage</th>
+            <th>Valeur ({{ selectedSensorUnit }})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in tableData" :key="row.timestamp">
+            <td>{{ row.timestamp }}</td>
+            <td>{{ row.value }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </main>
 </template>
@@ -181,6 +289,32 @@ main {
   position: relative;
   height: 60vh;
   width: 100%;
+}
+
+.data-table-container {
+  margin-top: 3rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid var(--color-border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.data-table thead {
+  background-color: var(--color-background-soft);
+}
+
+.data-table th {
+  color: var(--color-heading);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
