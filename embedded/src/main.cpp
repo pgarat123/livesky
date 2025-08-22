@@ -7,7 +7,8 @@
 
 #define DEVICE_ADDR 0x42
 #define uS_TO_S_FACTOR 1000000ULL  // Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  300        // Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP  30        // Time ESP32 will go to sleep (in seconds)
+#define MOSFET_PIN 27             // Pin connected to the Transistor Base (using a safe pin)
 
 DFRobot_LarkWeatherStation_I2C lark(DEVICE_ADDR, &Wire);
 
@@ -22,7 +23,11 @@ void print_wakeup_reason();
 
 void setup(void) {
     Serial.begin(9600);
-    delay(1000); // Wait for serial to initialize
+    // Power ON the sensor
+    pinMode(MOSFET_PIN, OUTPUT);
+    digitalWrite(MOSFET_PIN, HIGH); 
+    Serial.printf("MOSFET on pin %d set to HIGH\n", MOSFET_PIN);
+    delay(10000); // Wait for the sensor to stabilize
 
     Serial.println("\nBooting...");
     print_wakeup_reason();
@@ -30,8 +35,12 @@ void setup(void) {
     // Initialize sensor
     if (lark.begin() != 0) {
         Serial.println("Sensor initialization failed. Going to sleep.");
+        digitalWrite(MOSFET_PIN, LOW); // Power OFF the sensor
+        Serial.flush();
         esp_deep_sleep_start();
     }
+
+
     Serial.println("Sensor initialized successfully.");
 
     // Connect to WiFi
@@ -45,6 +54,7 @@ void setup(void) {
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
     
     Serial.flush(); // Ensure all serial messages are sent before sleeping
+    digitalWrite(MOSFET_PIN, LOW); // Power OFF the sensor
     esp_deep_sleep_start();
 }
 
