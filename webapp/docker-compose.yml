@@ -22,13 +22,14 @@ services:
 
   # Frontend (Dashboard)
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://backend:5000
     platform: linux/arm64/v8
     ports:
       - "8080:80"
     restart: unless-stopped
-    environment:
-      - VITE_API_BASE_URL=http://backend:5000
     depends_on:
       backend:
         condition: service_healthy

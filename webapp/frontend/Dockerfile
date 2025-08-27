@@ -1,6 +1,9 @@
 # ARM-compatible node image
 FROM node:20 AS build-stage
 
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
