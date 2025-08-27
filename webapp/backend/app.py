@@ -84,6 +84,55 @@ def add_data():
     db.session.commit()
     return jsonify({"message": "Donnee ajoutee"}), 201
 
+def calculate_wind_chill(temperature, wind_speed):
+    if temperature is None or wind_speed is None:
+        return None
+    # Wind chill formula is typically for temperatures <= 10°C and wind speed > 4.8 km/h
+    # If wind speed is too low, wind chill is not significant or not applicable
+    if temperature > 10 or wind_speed <= 4.8:
+        return temperature # Return original temperature if wind chill not applicable
+    
+    # V in km/h
+    wind_speed_kmh = wind_speed
+    
+    # Wind Chill Index formula (Environment Canada / NWS)
+    wind_chill = 13.12 + (0.6215 * temperature) - (11.37 * (wind_speed_kmh**0.16)) + (0.3965 * temperature * (wind_speed_kmh**0.16))
+    return round(wind_chill, 1)
+
+def calculate_heat_index(temperature_celsius, humidity):
+    if temperature_celsius is None or humidity is None:
+        return None
+    
+    # Convert Celsius to Fahrenheit
+    temperature_fahrenheit = (temperature_celsius * 9/5) + 32
+    
+    # Heat index formula is typically for temperatures >= 80°F (26.7°C) and humidity >= 40%
+    if temperature_fahrenheit < 80 or humidity < 40:
+        return temperature_celsius # Return original temperature if heat index not applicable
+    
+    T = temperature_fahrenheit
+    RH = humidity
+    
+    # Steadman (1984) / NWS Heat Index formula
+    heat_index_fahrenheit = -42.379 + 2.04901523*T + 10.14333127*RH - 0.22475541*T*RH - \
+                            6.83783e-3*T**2 - 5.481717e-2*RH**2 + 1.22874e-3*T**2*RH + \
+                            8.5282e-4*T*RH**2 - 1.99e-6*T**2*RH**2
+    
+    # Convert back to Celsius
+    heat_index_celsius = (heat_index_fahrenheit - 32) * 5/9
+    return round(heat_index_celsius, 1)
+
+def calculate_trend(current_value, past_value):
+    if current_value is None or past_value is None:
+        return 'stable'
+    # Using a small tolerance to avoid flagging minor fluctuations
+    if current_value > past_value + 0.2:
+        return 'rising'
+    elif current_value < past_value - 0.2:
+        return 'falling'
+    else:
+        return 'stable'
+
 @app.route('/api/data', methods=['GET'])
 def get_data():
     latest_readings_subquery = db.session.query(
@@ -99,8 +148,24 @@ def get_data():
         )
     ).order_by(SensorReading.timestamp.desc()).all()
 
-    data_list = [
-        {
+    data_list = []
+    for reading in readings:
+        past_time = reading.timestamp - timedelta(hours=1)
+        past_reading = SensorReading.query.filter(
+            SensorReading.device_id == reading.device_id,
+            SensorReading.timestamp <= past_time
+        ).order_by(SensorReading.timestamp.desc()).first()
+
+        trends = {
+            'temperature': calculate_trend(reading.temperature, past_reading.temperature if past_reading else None),
+            'humidity': calculate_trend(reading.humidity, past_reading.humidity if past_reading else None),
+            'pressure': calculate_trend(reading.pressure, past_reading.pressure if past_reading else None),
+        }
+
+        heat_index = calculate_heat_index(reading.temperature, reading.humidity)
+        wind_chill = calculate_wind_chill(reading.temperature, reading.wind_speed)
+
+        data_list.append({
             "id": reading.id,
             "device_id": reading.device.device_id,
             "temperature": reading.temperature,
@@ -110,10 +175,14 @@ def get_data():
             "wind_direction": reading.wind_direction,
             "timestamp": reading.timestamp.isoformat() + 'Z',
             "device_name": reading.device.device_name,
-            "location_name": reading.device.location.location_name
-        } for reading in readings
-    ]
+            "location_name": reading.device.location.location_name,
+            "trends": trends,
+            "heat_index": heat_index,
+            "wind_chill": wind_chill
+        })
+        
     return jsonify(data_list)
+
 
 
 @app.route('/api/devices', methods=['GET'])

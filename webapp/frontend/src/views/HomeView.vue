@@ -25,6 +25,18 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(pollingInterval) // Nettoyage de l'intervalle à la destruction du composant
 })
+
+const getTrendIcon = (trend) => {
+  if (trend === 'rising') return 'arrow-up';
+  if (trend === 'falling') return 'arrow-down';
+  return 'minus';
+};
+
+const getTrendColor = (trend) => {
+  if (trend === 'rising') return 'color: #4ade80;'; // green-400
+  if (trend === 'falling') return 'color: #f87171;'; // red-400
+  return 'color: #9ca3af;'; // gray-400
+}
 </script>
 
 <template>
@@ -47,21 +59,45 @@ onUnmounted(() => {
                 <vue-feather type="thermometer" size="16"></vue-feather>
                 <span>Température:</span>
               </span>
-              <span>{{ reading.temperature }} °C</span>
+              <span class="value-trend">
+                <vue-feather
+                  v-if="reading.trends"
+                  :type="getTrendIcon(reading.trends.temperature)"
+                  size="16"
+                  :style="getTrendColor(reading.trends.temperature)"
+                ></vue-feather>
+                <span>{{ reading.temperature }} °C</span>
+              </span>
             </li>
             <li v-if="reading.humidity !== null">
               <span class="data-point">
                 <vue-feather type="droplet" size="16"></vue-feather>
                 <span>Humidité:</span>
               </span>
-              <span>{{ reading.humidity }} %</span>
+              <span class="value-trend">
+                <vue-feather
+                  v-if="reading.trends"
+                  :type="getTrendIcon(reading.trends.humidity)"
+                  size="16"
+                  :style="getTrendColor(reading.trends.humidity)"
+                ></vue-feather>
+                <span>{{ reading.humidity }} %</span>
+              </span>
             </li>
             <li v-if="reading.pressure !== null">
                <span class="data-point">
                 <vue-feather type="target" size="16"></vue-feather>
                 <span>Pression:</span>
               </span>
-              <span>{{ reading.pressure }} hPa</span>
+              <span class="value-trend">
+                <vue-feather
+                  v-if="reading.trends"
+                  :type="getTrendIcon(reading.trends.pressure)"
+                  size="16"
+                  :style="getTrendColor(reading.trends.pressure)"
+                ></vue-feather>
+                <span>{{ reading.pressure }} hPa</span>
+              </span>
             </li>
             <li v-if="reading.wind_speed !== null">
               <span class="data-point">
@@ -79,8 +115,30 @@ onUnmounted(() => {
             </li>
           </ul>
         </div>
+        <div class="additional-data-section">
+          <hr class="section-separator">
+          <ul>
+            <li v-if="reading.heat_index !== null">
+              <span class="data-point">
+                <vue-feather type="thermometer" size="16"></vue-feather>
+                <span>Indice de chaleur:</span>
+              </span>
+              <span>{{ reading.heat_index }} °C</span>
+            </li>
+            <li v-if="reading.wind_chill !== null">
+              <span class="data-point">
+                <vue-feather type="wind" size="16"></vue-feather>
+                <span>Temp. ressentie:</span>
+              </span>
+              <span>{{ reading.wind_chill }} °C</span>
+            </li>
+          </ul>
+        </div>
       </RouterLink>
     </div>
+
+    
+
     <div v-else>
       <p>Chargement des données ou aucune donnée disponible...</p>
     </div>
@@ -158,10 +216,28 @@ main {
   border-bottom: none;
 }
 
+.additional-data-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.section-separator {
+  border: 0;
+  height: 1px;
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0), var(--color-border), rgba(0, 0, 0, 0));
+  margin-bottom: 1rem;
+}
+
 .data-point {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.value-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Stacking on mobile */
