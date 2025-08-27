@@ -73,7 +73,7 @@ def add_data():
 
     # Convert wind speed from m/s to km/h if present
     wind_speed_ms = data.get('wind_speed')
-    wind_speed_kmh = wind_speed_ms * 3.6 if wind_speed_ms is not None else None
+    wind_speed_kmh = round(wind_speed_ms * 3.6, 1) if wind_speed_ms is not None else None
 
     new_reading = SensorReading(
         device_id=data['device_id'],
