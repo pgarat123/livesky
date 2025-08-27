@@ -71,12 +71,16 @@ def add_data():
     if not device:
         return jsonify({"error": "Appareil non trouvé"}), 404
 
+    # Convert wind speed from m/s to km/h if present
+    wind_speed_ms = data.get('wind_speed')
+    wind_speed_kmh = wind_speed_ms * 3.6 if wind_speed_ms is not None else None
+
     new_reading = SensorReading(
         device_id=data['device_id'],
         temperature=data.get('temperature'),
         humidity=data.get('humidity'),
         pressure=data.get('pressure'),
-        wind_speed=data.get('wind_speed'),
+        wind_speed=wind_speed_kmh,
         wind_direction=data.get('wind_direction')
     )
 
