@@ -160,6 +160,22 @@ const tableData = computed(() => {
     .reverse();
 });
 
+const stats = computed(() => {
+  const data = chartDataRaw.value.data;
+  if (!data || data.length === 0) {
+    return { min: 0, max: 0, avg: 0 };
+  }
+  const cleanData = data.filter(v => v !== null);
+  if (cleanData.length === 0) {
+    return { min: 0, max: 0, avg: 0 };
+  }
+  const sum = cleanData.reduce((a, b) => a + b, 0);
+  const avg = (sum / cleanData.length).toFixed(1);
+  const min = Math.min(...cleanData).toFixed(1);
+  const max = Math.max(...cleanData).toFixed(1);
+  return { min, max, avg };
+});
+
 watch(selectedSensor, fetchChartData)
 watch(selectedRange, fetchChartData)
 
@@ -207,6 +223,21 @@ onMounted(fetchChartData)
             :clearable="false"
             :searchable="false"
         ></v-select>
+      </div>
+    </div>
+
+    <div class="stats-container" v-if="!loading && chartDataRaw.data.length > 0">
+      <div class="stat-item">
+        <span class="label">Min</span>
+        <span class="value">{{ stats.min }} {{ selectedSensorUnit }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Max</span>
+        <span class="value">{{ stats.max }} {{ selectedSensorUnit }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Moyenne</span>
+        <span class="value">{{ stats.avg }} {{ selectedSensorUnit }}</span>
       </div>
     </div>
 
@@ -315,6 +346,31 @@ main {
 .data-table th {
   color: var(--color-heading);
   font-weight: 600;
+}
+
+.stats-container {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  background-color: var(--color-background-soft);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-item .label {
+  display: block;
+  font-size: 0.9em;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+.stat-item .value {
+  display: block;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--color-heading);
 }
 
 @media (max-width: 768px) {

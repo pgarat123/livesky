@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import VueFeather from 'vue-feather';
 
 const sensorData = ref([])
@@ -47,6 +47,50 @@ const getTrendColor = (trend) => {
   if (trend === 'falling') return 'color: #f87171;'; // red-400
   return 'color: #9ca3af;'; // gray-400
 }
+
+const getWeatherInterpretation = (reading) => {
+  if (!reading) return null;
+
+  const { temperature, humidity, trends } = reading;
+  let icon = 'sun';
+  let condition = 'Ensoleillé';
+  let forecast = 'Le temps semble stable.';
+
+  // --- Logique de condition actuelle ---
+  if (temperature !== null && temperature <= 0.5 && humidity !== null && humidity > 85) {
+    condition = 'Neige possible';
+    icon = 'cloud-snow';
+  } else if (humidity !== null && humidity > 90) {
+    condition = 'Averses possibles';
+    icon = 'cloud-rain';
+  } else if (humidity !== null && humidity > 75) {
+    condition = 'Très nuageux';
+    icon = 'cloud';
+  } else if (humidity !== null && humidity > 60) {
+    condition = 'Partiellement nuageux';
+    icon = 'cloud';
+  }
+
+  if (trends) {
+    if (trends.pressure === 'falling') {
+      forecast = 'La pression chute, le temps pourrait se dégrader.';
+    } else if (trends.pressure === 'rising') {
+      forecast = 'La pression monte, une amélioration est probable.';
+    } else if (trends.humidity === 'rising' && trends.temperature === 'falling') {
+      forecast = 'Le temps devient plus froid et humide.';
+    }
+  }
+
+  return { icon, condition, forecast };
+};
+
+const weatherInterpretation = computed(() => {
+  if (!sensorData.value || sensorData.value.length === 0) {
+    return null;
+  }
+  // Basé sur la première station météo pour une vue d'ensemble
+  return getWeatherInterpretation(sensorData.value[0]);
+});
 </script>
 
 <template>
@@ -56,6 +100,17 @@ const getTrendColor = (trend) => {
     <div class="disclaimer-box" v-if="showDisclaimer">
       <vue-feather type="alert-triangle" size="18"></vue-feather>
       <p><strong>Avertissement :</strong> En journée, la température peut être inexacte et surestimée de 2 degrés ou plus si le capteur est exposé en plein soleil.</p>
+    </div>
+
+    <div class="interpretation-container" v-if="weatherInterpretation">
+      <div class="current-condition">
+        <vue-feather :type="weatherInterpretation.icon" size="48"></vue-feather>
+        <p class="condition-text">{{ weatherInterpretation.condition }}</p>
+      </div>
+      <div class="forecast">
+        <vue-feather type="trending-up" size="20"></vue-feather>
+        <p>{{ weatherInterpretation.forecast }}</p>
+      </div>
     </div>
 
     <div class="dashboard-container" v-if="sensorData.length > 0">
@@ -152,7 +207,7 @@ const getTrendColor = (trend) => {
       </RouterLink>
     </div>
 
-    
+
 
     <div v-else>
       <p>Chargement des données ou aucune donnée disponible...</p>
@@ -267,6 +322,31 @@ main {
     width: 100%;
     max-width: 450px; /* Adjust max-width for mobile if needed */
   }
+
+  .interpretation-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 1rem;
+  }
+
+  .current-condition {
+    gap: 1rem;
+  }
+
+  .current-condition .condition-text {
+    font-size: 1.5em;
+  }
+
+  .forecast {
+    font-size: 1em;
+  }
+
+  /* Prevents the icons from shrinking when space is limited */
+  .current-condition .vue-feather,
+  .forecast .vue-feather {
+    flex-shrink: 0;
+  }
 }
 
 .disclaimer-box {
@@ -289,4 +369,42 @@ main {
 .disclaimer-box p {
   margin: 0;
 }
+
+.interpretation-container {
+  background-color: var(--color-background-mute);
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.current-condition {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.current-condition .condition-text {
+  font-size: 1.8em;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0;
+}
+
+.forecast {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.1em;
+  color: var(--color-text);
+  opacity: 0.9;
+}
+
+.forecast p {
+  margin: 0;
+}
+
 </style>
