@@ -4,7 +4,7 @@ import VueFeather from 'vue-feather';
 
 const sensorData = ref([])
 const showDisclaimer = ref(false)
-const API_BASE_URL = 'http://192.168.1.20:5001' // TODO: Use a configurable API URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 let pollingInterval = null
 let timeInterval = null
 
