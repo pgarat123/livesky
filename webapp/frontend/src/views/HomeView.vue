@@ -3,8 +3,15 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import VueFeather from 'vue-feather';
 
 const sensorData = ref([])
+const showDisclaimer = ref(false)
 const API_BASE_URL = 'http://192.168.1.20:5001' // Temp not fixed IP
 let pollingInterval = null
+let timeInterval = null
+
+const checkDisclaimerTime = () => {
+  const currentHour = new Date().getHours();
+  showDisclaimer.value = currentHour >= 9 && currentHour < 18;
+};
 
 const fetchData = async () => {
   try {
@@ -19,11 +26,14 @@ const fetchData = async () => {
 
 onMounted(() => {
   fetchData() // Premier chargement immédiat
+  checkDisclaimerTime() // Vérifie l'heure au montage
   pollingInterval = setInterval(fetchData, 10000) // Rafraîchit toutes les 10 secondes
+  timeInterval = setInterval(checkDisclaimerTime, 60000) // Vérifie l'heure chaque minute
 })
 
 onUnmounted(() => {
   clearInterval(pollingInterval) // Nettoyage de l'intervalle à la destruction du composant
+  clearInterval(timeInterval)
 })
 
 const getTrendIcon = (trend) => {
@@ -42,6 +52,11 @@ const getTrendColor = (trend) => {
 <template>
   <main>
     <h1>Tableau de Bord Météo</h1>
+
+    <div class="disclaimer-box" v-if="showDisclaimer">
+      <vue-feather type="alert-triangle" size="18"></vue-feather>
+      <p><strong>Avertissement :</strong> En journée, la température peut être inexacte et surestimée de 2 degrés ou plus si le capteur est exposé en plein soleil.</p>
+    </div>
 
     <div class="dashboard-container" v-if="sensorData.length > 0">
       <RouterLink :to="`/device/${reading.device_id}`" class="device-card" v-for="reading in sensorData" :key="reading.id">
@@ -252,5 +267,26 @@ main {
     width: 100%;
     max-width: 450px; /* Adjust max-width for mobile if needed */
   }
+}
+
+.disclaimer-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: #fef9c3; /* A light yellow color */
+  border: 1px solid #fde047; /* A darker yellow border */
+  color: #713f12; /* Dark text for readability */
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+/* Prevents the icon from shrinking and being cut off on mobile */
+.disclaimer-box .vue-feather {
+  flex-shrink: 0;
+}
+
+.disclaimer-box p {
+  margin: 0;
 }
 </style>
