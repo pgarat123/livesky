@@ -8,7 +8,7 @@ const allReadings = ref([]);
 const deviceReadings = ref([]);
 
 // Refs for state management
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_BASE_URL = '';
 const showModal = ref(false);
 const editingDevice = ref(null);
 const selectedDevice = ref(null);

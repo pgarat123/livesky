@@ -9,7 +9,7 @@ import VueFeather from 'vue-feather';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement)
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_BASE_URL = '';
 const route = useRoute()
 const deviceId = route.params.id
 
