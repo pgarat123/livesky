@@ -7,7 +7,7 @@
 
 #define DEVICE_ADDR 0x42
 #define uS_TO_S_FACTOR 1000000ULL  // Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  30        // Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP  300        // Time ESP32 will go to sleep (in seconds)
 #define MOSFET_PIN 27             // Pin connected to the Transistor Base (using a safe pin)
 
 DFRobot_LarkWeatherStation_I2C lark(DEVICE_ADDR, &Wire);
