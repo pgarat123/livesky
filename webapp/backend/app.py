@@ -209,11 +209,11 @@ def update_device(device_id):
     if 'device_name' in data:
         device.device_name = data['device_name']
     
-    # Optionnel : Gérer le changement de lieu
+    # Optional: Handle location change
     if 'location_name' in data:
         location = Location.query.filter_by(location_name=data['location_name']).first()
         if not location:
-            # Créer le lieu s'il n'existe pas
+            # Create the location if it doesn't exist
             location = Location(location_name=data['location_name'])
             db.session.add(location)
         device.location = location
@@ -225,7 +225,7 @@ def update_device(device_id):
 def delete_device(device_id):
     device = Device.query.get_or_404(device_id)
     
-    # Supprimer d'abord toutes les lectures de capteurs associées
+    # First, delete all associated sensor readings to maintain data integrity
     SensorReading.query.filter_by(device_id=device_id).delete()
     
     db.session.delete(device)

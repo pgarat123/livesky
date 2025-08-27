@@ -4,7 +4,7 @@ import VueFeather from 'vue-feather';
 
 const sensorData = ref([])
 const showDisclaimer = ref(false)
-const API_BASE_URL = 'http://192.168.1.20:5001' // Temp not fixed IP
+const API_BASE_URL = 'http://192.168.1.20:5001' // TODO: Use a configurable API URL
 let pollingInterval = null
 let timeInterval = null
 
@@ -19,20 +19,21 @@ const fetchData = async () => {
     sensorData.value = await response.json()
   } catch (error) {
     console.error('Erreur lors de la récupération des données:', error)
-    // Optionnel : vous pourriez vouloir arrêter le polling en cas d'erreur réseau persistante
+    // Optional: consider stopping the polling on persistent network errors
     // clearInterval(pollingInterval)
   }
 }
 
 onMounted(() => {
-  fetchData() // Premier chargement immédiat
-  checkDisclaimerTime() // Vérifie l'heure au montage
-  pollingInterval = setInterval(fetchData, 10000) // Rafraîchit toutes les 10 secondes
-  timeInterval = setInterval(checkDisclaimerTime, 60000) // Vérifie l'heure chaque minute
+  fetchData() // Initial data fetch
+  checkDisclaimerTime() // Set initial state for disclaimer visibility
+  pollingInterval = setInterval(fetchData, 10000) // Refresh data every 10 seconds
+  timeInterval = setInterval(checkDisclaimerTime, 60000) // Check time every minute
 })
 
 onUnmounted(() => {
-  clearInterval(pollingInterval) // Nettoyage de l'intervalle à la destruction du composant
+  // Clear intervals on component destruction to prevent memory leaks
+  clearInterval(pollingInterval)
   clearInterval(timeInterval)
 })
 
@@ -56,7 +57,7 @@ const getWeatherInterpretation = (reading) => {
   let condition = 'Ensoleillé';
   let forecast = 'Le temps semble stable.';
 
-  // --- Logique de condition actuelle ---
+  // --- Simple forecast logic ---
   if (temperature !== null && temperature <= 0.5 && humidity !== null && humidity > 85) {
     condition = 'Neige possible';
     icon = 'cloud-snow';
@@ -88,7 +89,7 @@ const weatherInterpretation = computed(() => {
   if (!sensorData.value || sensorData.value.length === 0) {
     return null;
   }
-  // Basé sur la première station météo pour une vue d'ensemble
+  // Interpretation is based on the first device for a general overview
   return getWeatherInterpretation(sensorData.value[0]);
 });
 </script>

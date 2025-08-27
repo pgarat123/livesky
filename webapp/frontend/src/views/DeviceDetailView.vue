@@ -9,7 +9,7 @@ import VueFeather from 'vue-feather';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement)
 
-const API_BASE_URL = 'http://192.168.1.20:5001' // Temp IP
+const API_BASE_URL = 'http://192.168.1.20:5001' // TODO: Use a configurable API URL
 const route = useRoute()
 const deviceId = route.params.id
 
@@ -133,7 +133,7 @@ const chartOptions = computed(() => ({
       }
     },
     y: {
-      grace: '10%' // Ajoute 10% de marge en haut et en bas de l'échelle
+      grace: '10%' // Add 10% padding to the top and bottom of the y-axis
     }
   }
 }))
