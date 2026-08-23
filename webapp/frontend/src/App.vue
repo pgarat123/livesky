@@ -1,6 +1,37 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import VueFeather from 'vue-feather'
+
+const THEME_KEY = 'livesky-theme'
+const THEME_ORDER = ['auto', 'light', 'dark']
+const THEME_ICON = { auto: 'monitor', light: 'sun', dark: 'moon' }
+const THEME_LABEL = { auto: 'Thème automatique', light: 'Thème clair', dark: 'Thème sombre' }
+
+const theme = ref(localStorage.getItem(THEME_KEY) === 'light' || localStorage.getItem(THEME_KEY) === 'dark'
+  ? localStorage.getItem(THEME_KEY)
+  : 'auto')
+
+const applyTheme = (value) => {
+  if (value === 'auto') {
+    document.documentElement.removeAttribute('data-theme')
+  } else {
+    document.documentElement.setAttribute('data-theme', value)
+  }
+}
+
+const cycleTheme = () => {
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(theme.value) + 1) % THEME_ORDER.length]
+  theme.value = next
+  if (next === 'auto') {
+    localStorage.removeItem(THEME_KEY)
+  } else {
+    localStorage.setItem(THEME_KEY, next)
+  }
+  applyTheme(next)
+}
+
+onMounted(() => applyTheme(theme.value))
 </script>
 
 <template>
@@ -15,6 +46,9 @@ import VueFeather from 'vue-feather'
         <RouterLink to="/historique">Historique</RouterLink>
         <RouterLink to="/previsions">Prévisions</RouterLink>
         <RouterLink to="/admin">Admin</RouterLink>
+        <button class="theme-toggle" @click="cycleTheme" :title="THEME_LABEL[theme]">
+          <vue-feather :type="THEME_ICON[theme]" size="16"></vue-feather>
+        </button>
       </nav>
     </div>
   </header>
@@ -95,5 +129,26 @@ nav a:hover {
 nav a.router-link-exact-active {
   background: var(--color-accent-soft);
   color: var(--color-accent);
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  margin-left: 0.15rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-heading);
 }
 </style>

@@ -8,8 +8,17 @@ import SunBadge from '../components/SunBadge.vue'
 
 const sensorData = ref([])
 const sparklines = ref({}) // { [device_id]: { temperature: {labels,data}, humidity: {...}, pressure: {...} } }
+const now = ref(new Date())
 let pollingInterval = null
 let sparklineInterval = null
+let clockInterval = null
+
+// Cadence normale de la station : environ une mesure toutes les 5 à 8 min.
+// Au-delà de 2h sans nouvelle mesure, il y a probablement un vrai souci
+// (coupure secteur, WiFi, capteur en panne) plutôt qu'un simple raté ponctuel.
+const STALE_AFTER_MIN = 20
+const OFFLINE_AFTER_MIN = 120
+const FROST_RISK_C = 2
 
 const fetchData = async () => {
   try {
@@ -42,11 +51,13 @@ onMounted(async () => {
   fetchSparklines()
   pollingInterval = setInterval(fetchData, 10000)
   sparklineInterval = setInterval(fetchSparklines, 5 * 60 * 1000)
+  clockInterval = setInterval(() => { now.value = new Date() }, 30000)
 })
 
 onUnmounted(() => {
   clearInterval(pollingInterval)
   clearInterval(sparklineInterval)
+  clearInterval(clockInterval)
 })
 
 const getTrendIcon = (trend) => {
@@ -84,6 +95,22 @@ const spark = (deviceId, sensor) => {
 }
 
 const formattedTime = (ts) => new Date(ts).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+
+const freshness = (reading) => {
+  const minutes = Math.max(0, Math.round((now.value - new Date(reading.timestamp)) / 60000))
+  const status = minutes < STALE_AFTER_MIN ? 'fresh' : minutes < OFFLINE_AFTER_MIN ? 'stale' : 'offline'
+  return { status, minutes }
+}
+
+const formatRelative = (minutes) => {
+  if (minutes < 1) return "à l'instant"
+  if (minutes < 60) return `il y a ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return `il y a ${hours}h${rest > 0 ? String(rest).padStart(2, '0') : ''}`
+}
+
+const isFrostRisk = (reading) => reading.temperature !== null && reading.temperature <= FROST_RISK_C
 </script>
 
 <template>
@@ -104,8 +131,24 @@ const formattedTime = (ts) => new Date(ts).toLocaleString('fr-FR', { dateStyle: 
               :risk="reading.sun.exposure_risk"
               :corrected-temperature="reading.sun.temperature_corrected"
             />
-            <p class="timestamp">Dernière mesure : {{ formattedTime(reading.timestamp) }}</p>
+            <div class="freshness" :class="freshness(reading).status" :title="formattedTime(reading.timestamp)">
+              <span class="dot"></span>
+              <span>{{ formatRelative(freshness(reading).minutes) }}</span>
+            </div>
           </div>
+        </div>
+
+        <div v-if="freshness(reading).status === 'offline'" class="alert-banner offline-banner">
+          <vue-feather type="wifi-off" size="18"></vue-feather>
+          <p>
+            Dernière mesure reçue {{ formatRelative(freshness(reading).minutes) }} ({{ formattedTime(reading.timestamp) }}) —
+            la station ne répond peut-être plus (coupure secteur, WiFi, ou capteur).
+          </p>
+        </div>
+
+        <div v-if="isFrostRisk(reading)" class="alert-banner frost-banner">
+          <vue-feather type="cloud-snow" size="18"></vue-feather>
+          <p><strong>Risque de gel</strong> — pensez aux plantes sensibles et aux canalisations extérieures.</p>
         </div>
 
         <div class="stats-grid">
@@ -188,9 +231,77 @@ const formattedTime = (ts) => new Date(ts).toLocaleString('fr-FR', { dateStyle: 
   gap: 0.5rem;
 }
 
-.timestamp {
+.freshness {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.8rem;
   color: var(--color-text-muted);
+}
+
+.freshness .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
+
+.freshness.stale .dot {
+  background: var(--color-rising);
+}
+
+.freshness.offline .dot {
+  background: var(--color-danger);
+}
+
+.freshness.offline {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+}
+
+.alert-banner svg {
+  flex-shrink: 0;
+}
+
+.alert-banner p {
+  margin: 0;
+}
+
+.offline-banner {
+  background: #fde8e8;
+  border: 1px solid #f5b8b8;
+  color: #7a1f1f;
+}
+
+:root[data-theme='dark'] .offline-banner {
+  background: #3a1c1c;
+  border-color: #6b2b2b;
+  color: #f3b4b4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .offline-banner {
+    background: #3a1c1c;
+    border-color: #6b2b2b;
+    color: #f3b4b4;
+  }
+}
+
+.frost-banner {
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
 }
 
 .stats-grid {
