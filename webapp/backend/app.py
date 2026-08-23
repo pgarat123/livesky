@@ -1,11 +1,14 @@
 import os
+import threading
+import time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from datetime import datetime, timedelta
 
 import stats
 import forecast
-from models import db, Location, Device, SensorReading
+import notifications
+from models import db, Location, Device, SensorReading, NotificationSubscriber
 from sun import sun_bias_estimate, classify_exposure
 
 app = Flask(__name__)
@@ -17,6 +20,23 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+
+def _offline_check_loop():
+    """Contrôle périodique, indépendant des requêtes HTTP : c'est l'ABSENCE de
+    nouvelle mesure qu'on veut détecter, donc rien dans /api/data ne peut la
+    déclencher. Tourne dans un thread daemon, pas de dépendance supplémentaire
+    (pas de Celery/APScheduler pour un simple contrôle toutes les 10 min)."""
+    while True:
+        time.sleep(600)
+        with app.app_context():
+            try:
+                notifications.check_offline_alerts()
+            except Exception as e:
+                print(f"Erreur lors de la vérification hors-ligne: {e}")
+
+
+threading.Thread(target=_offline_check_loop, daemon=True).start()
 
 
 @app.route('/')
@@ -64,6 +84,13 @@ def add_data():
 
     db.session.add(new_reading)
     db.session.commit()
+
+    try:
+        notifications.check_reading_alerts(new_reading)
+    except Exception as e:
+        # Une alerte ratée ne doit jamais faire échouer l'ingestion de la mesure.
+        print(f"Erreur lors de la vérification des alertes: {e}")
+
     return jsonify({"message": "Donnee ajoutee"}), 201
 
 
@@ -270,6 +297,85 @@ def get_forecast(device_id):
     return jsonify(forecast.build_forecast(device_id, datetime.utcnow()))
 
 
+def _subscriber_dict(sub):
+    return {
+        "id": sub.id,
+        "name": sub.name,
+        "ntfy_topic": sub.ntfy_topic,
+        "device_id": sub.device_id,
+        "frost_enabled": sub.frost_enabled,
+        "heatwave_enabled": sub.heatwave_enabled,
+        "high_wind_enabled": sub.high_wind_enabled,
+        "offline_enabled": sub.offline_enabled,
+    }
+
+
+@app.route('/api/notifications/subscribers', methods=['GET'])
+def get_subscribers():
+    device_id = request.args.get('device_id', type=int)
+    query = NotificationSubscriber.query
+    if device_id:
+        query = query.filter_by(device_id=device_id)
+    subs = query.order_by(NotificationSubscriber.id).all()
+    return jsonify([_subscriber_dict(s) for s in subs])
+
+
+@app.route('/api/notifications/subscribers', methods=['POST'])
+def create_subscriber():
+    data = request.get_json()
+    if not data or not data.get('name') or not data.get('ntfy_topic') or not data.get('device_id'):
+        return jsonify({"error": "Champs 'name', 'ntfy_topic' et 'device_id' requis"}), 400
+
+    Device.query.get_or_404(data['device_id'])
+
+    sub = NotificationSubscriber(
+        name=data['name'],
+        ntfy_topic=data['ntfy_topic'],
+        device_id=data['device_id'],
+        frost_enabled=data.get('frost_enabled', True),
+        heatwave_enabled=data.get('heatwave_enabled', True),
+        high_wind_enabled=data.get('high_wind_enabled', True),
+        offline_enabled=data.get('offline_enabled', True),
+    )
+    db.session.add(sub)
+    db.session.commit()
+    return jsonify(_subscriber_dict(sub)), 201
+
+
+@app.route('/api/notifications/subscribers/<int:sub_id>', methods=['PUT'])
+def update_subscriber(sub_id):
+    sub = NotificationSubscriber.query.get_or_404(sub_id)
+    data = request.get_json() or {}
+    for field in ['name', 'ntfy_topic', 'frost_enabled', 'heatwave_enabled', 'high_wind_enabled', 'offline_enabled']:
+        if field in data:
+            setattr(sub, field, data[field])
+    db.session.commit()
+    return jsonify(_subscriber_dict(sub))
+
+
+@app.route('/api/notifications/subscribers/<int:sub_id>', methods=['DELETE'])
+def delete_subscriber(sub_id):
+    sub = NotificationSubscriber.query.get_or_404(sub_id)
+    db.session.delete(sub)
+    db.session.commit()
+    return jsonify({"message": "Abonné supprimé."})
+
+
+@app.route('/api/notifications/subscribers/<int:sub_id>/test', methods=['POST'])
+def test_subscriber(sub_id):
+    sub = NotificationSubscriber.query.get_or_404(sub_id)
+    ok = notifications.send_ntfy(
+        sub.ntfy_topic,
+        "Test LiveSky",
+        "Si tu reçois ce message, les notifications sont bien configurées !",
+        tags=['white_check_mark'],
+        priority=3,
+    )
+    if ok:
+        return jsonify({"message": "Notification de test envoyée."})
+    return jsonify({"error": "Échec de l'envoi. Vérifie le nom du topic ntfy."}), 502
+
+
 @app.route('/api/admin/readings', methods=['GET'])
 def get_all_readings():
     """
@@ -331,4 +437,8 @@ def delete_reading(reading_id):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # debug=False : le débogueur interactif de Werkzeug permet l'exécution de
+    # code arbitraire depuis une page d'erreur, à éviter sur un site exposé
+    # (duckdns/ngrok). Ça évite aussi que le reloader de debug=True ne
+    # démarre le thread de fond ci-dessus deux fois (process parent + enfant).
+    app.run(host='0.0.0.0', port=5000, debug=False)

@@ -27,6 +27,11 @@ const router = createRouter({
       component: () => import('../views/ForecastView.vue'),
     },
     {
+      path: '/notifications',
+      name: 'notifications',
+      component: () => import('../views/NotificationsView.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('../views/AdminView.vue'),

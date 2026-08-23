@@ -45,6 +45,7 @@ onMounted(() => applyTheme(theme.value))
         <RouterLink to="/">Accueil</RouterLink>
         <RouterLink to="/historique">Historique</RouterLink>
         <RouterLink to="/previsions">Prévisions</RouterLink>
+        <RouterLink to="/notifications">Alertes</RouterLink>
         <RouterLink to="/admin">Admin</RouterLink>
         <button class="theme-toggle" @click="cycleTheme" :title="THEME_LABEL[theme]">
           <vue-feather :type="THEME_ICON[theme]" size="16"></vue-feather>
@@ -112,12 +113,17 @@ nav a {
 
   nav {
     width: 100%;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 0.2rem 0.1rem;
   }
 
   nav a {
-    padding: 0.4rem 0.4rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.78rem;
+  }
+
+  .theme-toggle {
+    margin-left: 0.3rem;
   }
 }
 
