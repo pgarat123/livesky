@@ -1,14 +1,20 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import VueFeather from 'vue-feather'
 </script>
 
 <template>
-  <header>
-    <div class="wrapper">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <RouterLink to="/" class="brand">
+        <vue-feather type="cloud-drizzle" size="22"></vue-feather>
+        <span>LiveSky</span>
+      </RouterLink>
       <nav>
-        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/">Accueil</RouterLink>
+        <RouterLink to="/historique">Historique</RouterLink>
+        <RouterLink to="/previsions">Prévisions</RouterLink>
         <RouterLink to="/admin">Admin</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
       </nav>
     </div>
   </header>
@@ -17,55 +23,61 @@ import { RouterLink, RouterView } from 'vue-router'
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--header-height);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-header-inner {
+  max-width: 1100px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-heading);
+  text-decoration: none;
+  flex-shrink: 0;
 }
 
 nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
 }
 
 nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
 }
 
-nav a:first-of-type {
-  border: 0;
+nav a:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-heading);
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+nav a.router-link-exact-active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 </style>

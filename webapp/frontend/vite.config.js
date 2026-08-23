@@ -15,4 +15,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    // En dev, proxifie /api vers le backend (le Pi par défaut, comme en prod via nginx).
+    proxy: {
+      '/api': {
+        target: process.env.VITE_DEV_API_PROXY || 'http://raspberrypi.local:5001',
+        changeOrigin: true,
+      },
+    },
+  },
 })

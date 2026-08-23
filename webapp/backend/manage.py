@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
-from app import app, db, Location, Device, SensorReading
+from app import app
+from models import db, Location, Device, SensorReading
 import math
 from sqlalchemy import text
 

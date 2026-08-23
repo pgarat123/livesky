@@ -142,7 +142,7 @@ const formatTimestamp = (ts) => new Date(ts).toLocaleString();
 </script>
 
 <template>
-  <main>
+  <main class="page">
     <!-- Devices Section -->
     <div class="header">
       <h1><i class="fas fa-server"></i> Administration des Appareils</h1>
@@ -260,7 +260,6 @@ const formatTimestamp = (ts) => new Date(ts).toLocaleString();
 
 <style scoped>
 main {
-  padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
@@ -286,7 +285,7 @@ main {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
-  background-color: var(--color-background-soft);
+  background-color: var(--color-surface);
 }
 
 .data-table th, .data-table td {
@@ -296,7 +295,7 @@ main {
 }
 
 .data-table th {
-  background-color: var(--color-background-mute);
+  background-color: var(--color-surface-muted);
   font-weight: 600;
 }
 
@@ -305,18 +304,17 @@ main {
 }
 
 .data-table tbody tr:hover {
-  background-color: var(--color-background-mute);
+  background-color: var(--color-surface-muted);
 }
 
 .selected-row {
-  background-color: var(--color-border-hover) !important;
+  background-color: var(--color-accent-soft) !important;
 }
 
 .empty-state {
   text-align: center;
   padding: 2rem;
-  color: var(--color-text);
-  opacity: 0.7;
+  color: var(--color-text-muted);
 }
 
 .actions {
@@ -373,7 +371,7 @@ main {
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid var(--color-border);
-  background-color: var(--color-background);
+  background-color: var(--color-bg);
   color: var(--color-text);
 }
 

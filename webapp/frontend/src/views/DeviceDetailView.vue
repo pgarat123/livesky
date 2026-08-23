@@ -2,12 +2,12 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Line } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement } from 'chart.js'
+import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement, Filler } from 'chart.js'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css';
 import VueFeather from 'vue-feather';
 
-ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement)
+ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement, Filler)
 
 const API_BASE_URL = '';
 const route = useRoute()
@@ -116,12 +116,25 @@ const chartData = computed(() => {
     labels: fullLabels.map(formatLabel),
     datasets: [{
       label: sensorOptions.find(opt => opt.value === selectedSensor.value)?.text || selectedSensor.value,
-      backgroundColor: '#f87979',
-      borderColor: '#f87979',
+      backgroundColor: 'rgba(47, 127, 214, 0.15)',
+      borderColor: '#2f7fd6',
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      borderWidth: 2,
+      tension: 0.3,
+      fill: true,
       data: fullData,
     }]
   };
 });
+
+const sunExposureSummary = computed(() => {
+  const risks = chartDataRaw.value.sun_exposure
+  if (selectedSensor.value !== 'temperature' || !risks || risks.length === 0) return null
+  const highCount = risks.filter((r) => r === 'high').length
+  if (highCount === 0) return null
+  return Math.round((100 * highCount) / risks.length)
+})
 
 const chartOptions = computed(() => ({
   responsive: true,
@@ -183,7 +196,7 @@ onMounted(fetchChartData)
 </script>
 
 <template>
-  <main>
+  <main class="page">
     <h1>Détail de l'appareil #{{ deviceId }}</h1>
 
     <div class="controls">
@@ -241,7 +254,14 @@ onMounted(fetchChartData)
       </div>
     </div>
 
-    <div class="chart-container">
+    <p v-if="sunExposureSummary" class="sun-note">
+      <vue-feather type="sun" size="15"></vue-feather>
+      Environ {{ sunExposureSummary }}% de ces mesures ont été prises avec le soleil haut : la
+      température affichée peut être surestimée sur ces périodes (voir la page d'accueil pour
+      une estimation corrigée sur la mesure en cours).
+    </p>
+
+    <div class="chart-container card">
       <Line v-if="!loading && chartData.datasets[0].data.length > 0" :data="chartData" :options="chartOptions" />
       <p v-if="loading">Chargement du graphique...</p>
       <p v-if="!loading && chartData.datasets[0].data.length === 0">Aucune donnée pour cette sélection.</p>
@@ -271,15 +291,15 @@ onMounted(fetchChartData)
 /* Global override for vue-select to match the app's theme */
 .control-group {
   --vs-controls-color: var(--color-text);
-  --vs-controls-bg: var(--color-background-soft);
+  --vs-controls-bg: var(--color-surface);
   --vs-border-color: var(--color-border);
-  --vs-border-radius: 4px;
+  --vs-border-radius: 8px;
 
-  --vs-dropdown-bg: var(--color-background-soft);
+  --vs-dropdown-bg: var(--color-surface);
   --vs-dropdown-color: var(--color-text);
   --vs-dropdown-option-color: var(--color-text);
 
-  --vs-dropdown-option--active-bg: var(--color-background-mute);
+  --vs-dropdown-option--active-bg: var(--color-surface-muted);
   --vs-dropdown-option--active-color: var(--color-heading);
 
   --vs-search-input-color: var(--color-text);
@@ -299,31 +319,57 @@ onMounted(fetchChartData)
 </style>
 
 <style scoped>
-main {
-  padding: 2rem;
+h1 {
+  margin-bottom: 1.5rem;
 }
+
 .controls {
   display: flex;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 .control-group {
   display: flex;
   flex-direction: column;
-  min-width: 250px; /* Give select some base width */
+  min-width: 220px;
 }
 .control-group label {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.sun-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.sun-note svg {
+  flex-shrink: 0;
 }
 
 .chart-container {
   position: relative;
-  height: 60vh;
+  height: 55vh;
   width: 100%;
+  padding: 1.25rem;
 }
 
 .data-table-container {
-  margin-top: 3rem;
+  margin-top: 2.5rem;
+}
+
+.data-table-container h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .data-table {
@@ -334,13 +380,13 @@ main {
 
 .data-table th,
 .data-table td {
-  border: 1px solid var(--color-border);
-  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.65rem 0.75rem;
   text-align: left;
 }
 
 .data-table thead {
-  background-color: var(--color-background-soft);
+  background-color: var(--color-surface-muted);
 }
 
 .data-table th {
@@ -352,31 +398,29 @@ main {
   display: flex;
   justify-content: space-around;
   gap: 1rem;
-  background-color: var(--color-background-soft);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
 }
 .stat-item {
   text-align: center;
 }
 .stat-item .label {
   display: block;
-  font-size: 0.9em;
-  color: var(--color-text);
+  font-size: 0.85em;
+  color: var(--color-text-muted);
   margin-bottom: 0.25rem;
 }
 .stat-item .value {
   display: block;
-  font-size: 1.5em;
+  font-size: 1.4em;
   font-weight: 600;
   color: var(--color-heading);
 }
 
 @media (max-width: 768px) {
-  main {
-    padding: 1rem;
-  }
   .controls {
     flex-direction: column;
     gap: 1rem;

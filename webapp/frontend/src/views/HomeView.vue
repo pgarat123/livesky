@@ -1,411 +1,237 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import VueFeather from 'vue-feather';
+import { RouterLink } from 'vue-router'
+import VueFeather from 'vue-feather'
+import StatCard from '../components/StatCard.vue'
+import Sparkline from '../components/Sparkline.vue'
+import SunBadge from '../components/SunBadge.vue'
 
 const sensorData = ref([])
-const showDisclaimer = ref(false)
-const API_BASE_URL = '';
+const sparklines = ref({}) // { [device_id]: { temperature: {labels,data}, humidity: {...}, pressure: {...} } }
 let pollingInterval = null
-let timeInterval = null
-
-const checkDisclaimerTime = () => {
-  const currentHour = new Date().getHours();
-  showDisclaimer.value = currentHour >= 9 && currentHour < 18;
-};
+let sparklineInterval = null
 
 const fetchData = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/data`)
+    const response = await fetch('/api/data')
     sensorData.value = await response.json()
   } catch (error) {
     console.error('Erreur lors de la récupération des données:', error)
-    // Optional: consider stopping the polling on persistent network errors
-    // clearInterval(pollingInterval)
   }
 }
 
-onMounted(() => {
-  fetchData() // Initial data fetch
-  checkDisclaimerTime() // Set initial state for disclaimer visibility
-  pollingInterval = setInterval(fetchData, 10000) // Refresh data every 10 seconds
-  timeInterval = setInterval(checkDisclaimerTime, 60000) // Check time every minute
+const SPARK_SENSORS = ['temperature', 'humidity', 'pressure']
+
+const fetchSparklines = async () => {
+  for (const device of sensorData.value) {
+    const perSensor = {}
+    for (const sensor of SPARK_SENSORS) {
+      try {
+        const res = await fetch(`/api/devices/${device.device_id}/history?sensor=${sensor}&range=6`)
+        perSensor[sensor] = await res.json()
+      } catch (error) {
+        console.error(`Erreur sparkline ${sensor}:`, error)
+      }
+    }
+    sparklines.value = { ...sparklines.value, [device.device_id]: perSensor }
+  }
+}
+
+onMounted(async () => {
+  await fetchData()
+  fetchSparklines()
+  pollingInterval = setInterval(fetchData, 10000)
+  sparklineInterval = setInterval(fetchSparklines, 5 * 60 * 1000)
 })
 
 onUnmounted(() => {
-  // Clear intervals on component destruction to prevent memory leaks
   clearInterval(pollingInterval)
-  clearInterval(timeInterval)
+  clearInterval(sparklineInterval)
 })
 
 const getTrendIcon = (trend) => {
-  if (trend === 'rising') return 'arrow-up';
-  if (trend === 'falling') return 'arrow-down';
-  return 'minus';
-};
-
-const getTrendColor = (trend) => {
-  if (trend === 'rising') return 'color: #4ade80;'; // green-400
-  if (trend === 'falling') return 'color: #f87171;'; // red-400
-  return 'color: #9ca3af;'; // gray-400
+  if (trend === 'rising') return 'arrow-up'
+  if (trend === 'falling') return 'arrow-down'
+  return 'minus'
 }
 
-const getWeatherInterpretation = (reading) => {
-  if (!reading) return null;
+const getTrendStyle = (trend) => {
+  if (trend === 'rising') return { color: 'var(--color-rising)' }
+  if (trend === 'falling') return { color: 'var(--color-falling)' }
+  return { color: 'var(--color-stable)' }
+}
 
-  const { temperature, humidity, trends } = reading;
-  let icon = 'sun';
-  let condition = 'Ensoleillé';
-  let forecast = 'Le temps semble stable.';
-
-  // --- Simple forecast logic ---
+const getCondition = (reading) => {
+  const { humidity, temperature } = reading
   if (temperature !== null && temperature <= 0.5 && humidity !== null && humidity > 85) {
-    condition = 'Neige possible';
-    icon = 'cloud-snow';
-  } else if (humidity !== null && humidity > 90) {
-    condition = 'Averses possibles';
-    icon = 'cloud-rain';
-  } else if (humidity !== null && humidity > 75) {
-    condition = 'Très nuageux';
-    icon = 'cloud';
-  } else if (humidity !== null && humidity > 60) {
-    condition = 'Partiellement nuageux';
-    icon = 'cloud';
+    return { icon: 'cloud-snow', text: 'Neige possible' }
   }
-
-  if (trends) {
-    if (trends.pressure === 'falling') {
-      forecast = 'La pression chute, le temps pourrait se dégrader.';
-    } else if (trends.pressure === 'rising') {
-      forecast = 'La pression monte, une amélioration est probable.';
-    } else if (trends.humidity === 'rising' && trends.temperature === 'falling') {
-      forecast = 'Le temps devient plus froid et humide.';
-    }
+  if (humidity !== null && humidity > 90) {
+    return { icon: 'cloud-rain', text: 'Averses possibles' }
   }
-
-  return { icon, condition, forecast };
-};
-
-const weatherInterpretation = computed(() => {
-  if (!sensorData.value || sensorData.value.length === 0) {
-    return null;
+  if (humidity !== null && humidity > 75) {
+    return { icon: 'cloud', text: 'Très nuageux' }
   }
-  // Interpretation is based on the first device for a general overview
-  return getWeatherInterpretation(sensorData.value[0]);
-});
+  if (humidity !== null && humidity > 60) {
+    return { icon: 'cloud', text: 'Partiellement nuageux' }
+  }
+  return { icon: 'sun', text: 'Ciel dégagé' }
+}
+
+const spark = (deviceId, sensor) => {
+  const d = sparklines.value[deviceId]?.[sensor]
+  return { labels: d?.labels ?? [], data: d?.data ?? [] }
+}
+
+const formattedTime = (ts) => new Date(ts).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
 </script>
 
 <template>
-  <main>
-    <h1>Tableau de Bord Météo</h1>
-
-    <div class="disclaimer-box" v-if="showDisclaimer">
-      <vue-feather type="alert-triangle" size="18"></vue-feather>
-      <p><strong>Avertissement :</strong> En journée, la température peut être inexacte et surestimée de 2 degrés ou plus si le capteur est exposé en plein soleil.</p>
-    </div>
-
-    <div class="interpretation-container" v-if="weatherInterpretation">
-      <div class="current-condition">
-        <vue-feather :type="weatherInterpretation.icon" size="48"></vue-feather>
-        <p class="condition-text">{{ weatherInterpretation.condition }}</p>
-      </div>
-      <div class="forecast">
-        <vue-feather type="trending-up" size="20"></vue-feather>
-        <p>{{ weatherInterpretation.forecast }}</p>
-      </div>
-    </div>
-
-    <div class="dashboard-container" v-if="sensorData.length > 0">
-      <RouterLink :to="`/device/${reading.device_id}`" class="device-card" v-for="reading in sensorData" :key="reading.id">
-
-        <div class="card-header">
-          <h2>{{ reading.device_name }}</h2>
-          <p>{{ reading.location_name }}</p>
+  <main class="page">
+    <div v-if="sensorData.length > 0" class="devices">
+      <section v-for="reading in sensorData" :key="reading.id" class="device-block">
+        <div class="hero card">
+          <div class="hero-main">
+            <vue-feather :type="getCondition(reading).icon" size="40"></vue-feather>
+            <div>
+              <h1>{{ getCondition(reading).text }}</h1>
+              <p class="location">{{ reading.device_name }} · {{ reading.location_name }}</p>
+            </div>
+          </div>
+          <div class="hero-meta">
+            <SunBadge
+              v-if="reading.sun"
+              :risk="reading.sun.exposure_risk"
+              :corrected-temperature="reading.sun.temperature_corrected"
+            />
+            <p class="timestamp">Dernière mesure : {{ formattedTime(reading.timestamp) }}</p>
+          </div>
         </div>
 
-        <div class="card-body">
-          <p class="timestamp">{{ new Date(reading.timestamp).toLocaleString() }}</p>
-          <ul>
-            <li v-if="reading.temperature !== null">
-              <span class="data-point">
-                <vue-feather type="thermometer" size="16"></vue-feather>
-                <span>Température:</span>
-              </span>
-              <span class="value-trend">
-                <vue-feather
-                  v-if="reading.trends"
-                  :type="getTrendIcon(reading.trends.temperature)"
-                  size="16"
-                  :style="getTrendColor(reading.trends.temperature)"
-                ></vue-feather>
-                <span>{{ reading.temperature }} °C</span>
-              </span>
-            </li>
-            <li v-if="reading.humidity !== null">
-              <span class="data-point">
-                <vue-feather type="droplet" size="16"></vue-feather>
-                <span>Humidité:</span>
-              </span>
-              <span class="value-trend">
-                <vue-feather
-                  v-if="reading.trends"
-                  :type="getTrendIcon(reading.trends.humidity)"
-                  size="16"
-                  :style="getTrendColor(reading.trends.humidity)"
-                ></vue-feather>
-                <span>{{ reading.humidity }} %</span>
-              </span>
-            </li>
-            <li v-if="reading.pressure !== null">
-               <span class="data-point">
-                <vue-feather type="target" size="16"></vue-feather>
-                <span>Pression:</span>
-              </span>
-              <span class="value-trend">
-                <vue-feather
-                  v-if="reading.trends"
-                  :type="getTrendIcon(reading.trends.pressure)"
-                  size="16"
-                  :style="getTrendColor(reading.trends.pressure)"
-                ></vue-feather>
-                <span>{{ reading.pressure }} hPa</span>
-              </span>
-            </li>
-            <li v-if="reading.wind_speed !== null">
-              <span class="data-point">
-                <vue-feather type="wind" size="16"></vue-feather>
-                <span>Vitesse du vent:</span>
-              </span>
-              <span>{{ reading.wind_speed }} km/h</span>
-            </li>
-            <li v-if="reading.wind_direction !== null">
-              <span class="data-point">
-                <vue-feather type="compass" size="16"></vue-feather>
-                <span>Direction du vent:</span>
-              </span>
-              <span>{{ reading.wind_direction }}</span>
-            </li>
-          </ul>
+        <div class="stats-grid">
+          <StatCard icon="thermometer" label="Température" :value="reading.temperature" unit="°C" v-if="reading.temperature !== null">
+            <vue-feather :type="getTrendIcon(reading.trends?.temperature)" size="15" :style="getTrendStyle(reading.trends?.temperature)"></vue-feather>
+            <template #footer>
+              <Sparkline v-bind="spark(reading.device_id, 'temperature')" color="#dc6803" />
+            </template>
+          </StatCard>
+
+          <StatCard icon="droplet" label="Humidité" :value="reading.humidity" unit="%" v-if="reading.humidity !== null">
+            <vue-feather :type="getTrendIcon(reading.trends?.humidity)" size="15" :style="getTrendStyle(reading.trends?.humidity)"></vue-feather>
+            <template #footer>
+              <Sparkline v-bind="spark(reading.device_id, 'humidity')" color="#2f7fd6" />
+            </template>
+          </StatCard>
+
+          <StatCard icon="target" label="Pression" :value="reading.pressure" unit="hPa" v-if="reading.pressure !== null">
+            <vue-feather :type="getTrendIcon(reading.trends?.pressure)" size="15" :style="getTrendStyle(reading.trends?.pressure)"></vue-feather>
+            <template #footer>
+              <Sparkline v-bind="spark(reading.device_id, 'pressure')" color="#7c3aed" />
+            </template>
+          </StatCard>
+
+          <StatCard icon="wind" label="Vent" :value="reading.wind_speed" unit="km/h" :sub="reading.wind_direction" v-if="reading.wind_speed !== null" />
+
+          <StatCard icon="thermometer" label="Ressenti" :value="reading.heat_index ?? reading.wind_chill" unit="°C" v-if="reading.heat_index !== null || reading.wind_chill !== null" />
         </div>
-        <div class="additional-data-section">
-          <hr class="section-separator">
-          <ul>
-            <li v-if="reading.heat_index !== null">
-              <span class="data-point">
-                <vue-feather type="thermometer" size="16"></vue-feather>
-                <span>Indice de chaleur:</span>
-              </span>
-              <span>{{ reading.heat_index }} °C</span>
-            </li>
-            <li v-if="reading.wind_chill !== null">
-              <span class="data-point">
-                <vue-feather type="wind" size="16"></vue-feather>
-                <span>Temp. ressentie:</span>
-              </span>
-              <span>{{ reading.wind_chill }} °C</span>
-            </li>
-          </ul>
-        </div>
-      </RouterLink>
+
+        <RouterLink :to="`/device/${reading.device_id}`" class="detail-link">
+          Voir l'historique détaillé
+          <vue-feather type="arrow-right" size="15"></vue-feather>
+        </RouterLink>
+      </section>
     </div>
 
-
-
-    <div v-else>
-      <p>Chargement des données ou aucune donnée disponible...</p>
+    <div v-else class="loading">
+      <p>Chargement des données…</p>
     </div>
   </main>
 </template>
 
 <style scoped>
-main {
-  padding: 2rem;
+.devices {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
 }
 
-.dashboard-container {
+.hero {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
-  justify-content: center; /* Center cards horizontally */
-}
-
-.device-card {
-  text-decoration: none;
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  background-color: var(--color-background-soft);
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  min-width: 300px;
-  flex-grow: 1; /* Allow cards to grow */
-  max-width: 400px; /* But not too wide */
-  transition: border-color 0.3s, background-color 0.3s;
-}
-
-.device-card:hover {
-  border-color: var(--color-border-hover);
-}
-
-.card-header {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.card-header h2 {
-  margin: 0;
-  color: var(--color-heading);
-}
-
-.card-header p {
-  margin: 0;
-  color: var(--color-text);
-}
-
-.card-body .timestamp {
-  font-size: 0.8em;
-  color: var(--color-text);
-  opacity: 0.8;
-  margin-bottom: 1rem;
-}
-
-.card-body ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.card-body li {
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
-.card-body li:last-child {
-  border-bottom: none;
-}
-
-.additional-data-section {
-  margin-top: 1rem;
-  padding-top: 1rem;
-}
-
-.section-separator {
-  border: 0;
-  height: 1px;
-  background-image: linear-gradient(to right, rgba(0, 0, 0, 0), var(--color-border), rgba(0, 0, 0, 0));
-  margin-bottom: 1rem;
-}
-
-.data-point {
+.hero-main {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
 }
 
-.value-trend {
+.hero-main h1 {
+  font-size: 1.4rem;
+}
+
+.location {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+.hero-meta {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 0.5rem;
 }
 
-/* Stacking on mobile */
-@media (max-width: 768px) {
-  .dashboard-container {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
+.timestamp {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
 
-  .device-card {
-    width: 100%;
-    max-width: 450px; /* Adjust max-width for mobile if needed */
-  }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
 
-  .interpretation-container {
+.stats-grid :deep(.value-row) {
+  flex-wrap: wrap;
+}
+
+.stats-grid :deep(.sparkline) {
+  margin-top: 0.6rem;
+}
+
+.detail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.loading {
+  color: var(--color-text-muted);
+  padding: 3rem 0;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .hero {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1.5rem;
-    padding: 1rem;
   }
 
-  .current-condition {
-    gap: 1rem;
-  }
-
-  .current-condition .condition-text {
-    font-size: 1.5em;
-  }
-
-  .forecast {
-    font-size: 1em;
-  }
-
-  /* Prevents the icons from shrinking when space is limited */
-  .current-condition .vue-feather,
-  .forecast .vue-feather {
-    flex-shrink: 0;
+  .hero-meta {
+    align-items: flex-start;
   }
 }
-
-.disclaimer-box {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background-color: #fef9c3; /* A light yellow color */
-  border: 1px solid #fde047; /* A darker yellow border */
-  color: #713f12; /* Dark text for readability */
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-}
-
-/* Prevents the icon from shrinking and being cut off on mobile */
-.disclaimer-box .vue-feather {
-  flex-shrink: 0;
-}
-
-.disclaimer-box p {
-  margin: 0;
-}
-
-.interpretation-container {
-  background-color: var(--color-background-mute);
-  border-radius: 8px;
-  padding: 1.5rem 2rem;
-  margin-bottom: 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-}
-
-.current-condition {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.current-condition .condition-text {
-  font-size: 1.8em;
-  font-weight: 600;
-  color: var(--color-heading);
-  margin: 0;
-}
-
-.forecast {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 1.1em;
-  color: var(--color-text);
-  opacity: 0.9;
-}
-
-.forecast p {
-  margin: 0;
-}
-
 </style>

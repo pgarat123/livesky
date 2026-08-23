@@ -13,6 +13,10 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/mydatabase
+      # Coordonnées de la station, utilisées pour estimer la position du soleil
+      # (biais radiatif du capteur de température). A ajuster si besoin.
+      - STATION_LAT=44.598
+      - STATION_LON=1.483
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]

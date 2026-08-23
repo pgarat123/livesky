@@ -75,7 +75,7 @@ const closeModal = () => {
 }
 
 .modal-container {
-  background: var(--color-background-soft);
+  background: var(--color-surface);
   color: var(--color-text);
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.5);
@@ -130,15 +130,15 @@ const closeModal = () => {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background-color: var(--color-background);
+  border-radius: 6px;
+  background-color: var(--color-bg);
   color: var(--color-text);
   transition: border-color 0.3s ease;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--color-border-hover);
+  border-color: var(--color-accent);
 }
 
 .modal-footer {
@@ -147,7 +147,7 @@ const closeModal = () => {
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--color-border);
-  background-color: var(--color-background-mute);
+  background-color: var(--color-surface-muted);
 }
 
 .btn {
@@ -161,7 +161,7 @@ const closeModal = () => {
 
 .btn-primary {
   background-color: #007bff;
-  color: var(--vt-c-white);
+  color: #fff;
 }
 .btn-primary:hover {
   background-color: #0056b3;
@@ -169,7 +169,7 @@ const closeModal = () => {
 
 .btn-secondary {
   background-color: #6c757d;
-  color: var(--vt-c-white);
+  color: #fff;
 }
 .btn-secondary:hover {
   background-color: #545b62;
