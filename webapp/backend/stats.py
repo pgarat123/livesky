@@ -6,6 +6,7 @@ plusieurs années de données, sans dépendance supplémentaire (pandas, etc).
 """
 
 from models import db, SensorReading
+from sun import classify_exposure
 
 RECORD_METRICS = {
     'temperature_max': (SensorReading.temperature, False),
@@ -26,10 +27,17 @@ def get_records(device_id=None):
             query = query.filter(SensorReading.device_id == device_id)
         query = query.order_by(column.asc() if ascending else column.desc())
         reading = query.first()
-        records[key] = {
+        record = {
             "value": getattr(reading, column.key) if reading else None,
             "timestamp": (reading.timestamp.isoformat() + 'Z') if reading else None,
         }
+        # Un record de température en plein soleil est probablement gonflé par le
+        # biais radiatif du capteur (voir sun.py) : on le signale plutôt que de le
+        # présenter comme une vraie température record.
+        if key.startswith('temperature') and reading:
+            risk, _ = classify_exposure(reading.timestamp)
+            record["sun_exposure_risk"] = risk
+        records[key] = record
     return records
 
 

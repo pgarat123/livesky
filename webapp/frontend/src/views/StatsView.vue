@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler } from 'chart.js'
 import StatCard from '../components/StatCard.vue'
+import VueFeather from 'vue-feather'
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler)
 
@@ -121,7 +122,14 @@ const yearlyOptions = {
       <section class="section">
         <h2>Records</h2>
         <div class="records-grid" v-if="records">
-          <StatCard icon="thermometer" label="Température max" :value="records.temperature_max.value" unit="°C" :sub="formatDate(records.temperature_max.timestamp)" />
+          <StatCard icon="thermometer" label="Température max" :value="records.temperature_max.value" unit="°C" :sub="formatDate(records.temperature_max.timestamp)">
+            <template #footer>
+              <p v-if="records.temperature_max.sun_exposure_risk === 'high'" class="record-caveat">
+                <vue-feather type="sun" size="13"></vue-feather>
+                Probablement gonflé par le soleil (mesure de jour, capteur non abrité)
+              </p>
+            </template>
+          </StatCard>
           <StatCard icon="thermometer" label="Température min" :value="records.temperature_min.value" unit="°C" :sub="formatDate(records.temperature_min.timestamp)" />
           <StatCard icon="droplet" label="Humidité max" :value="records.humidity_max.value" unit="%" :sub="formatDate(records.humidity_max.timestamp)" />
           <StatCard icon="target" label="Pression max" :value="records.pressure_max.value" unit="hPa" :sub="formatDate(records.pressure_max.timestamp)" />
@@ -132,7 +140,10 @@ const yearlyOptions = {
 
       <section class="section">
         <h2>Profil saisonnier (température par mois)</h2>
-        <p class="section-note">Moyenne, minimum et maximum observés chaque mois depuis le début de la collecte.</p>
+        <p class="section-note">
+          Moyenne, minimum et maximum observés chaque mois depuis le début de la collecte. Les
+          maximums peuvent être surestimés l'été : le capteur chauffe au soleil en journée.
+        </p>
         <div class="chart-box">
           <Line :data="climatologyChart" :options="climatologyOptions" />
         </div>
@@ -187,6 +198,24 @@ const yearlyOptions = {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
+}
+
+.record-caveat {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  line-height: 1.35;
+}
+
+.record-caveat svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 
 .chart-box {

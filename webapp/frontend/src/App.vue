@@ -27,20 +27,20 @@ import VueFeather from 'vue-feather'
   position: sticky;
   top: 0;
   z-index: 10;
-  height: var(--header-height);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
 .site-header-inner {
   max-width: 1100px;
-  height: 100%;
+  min-height: var(--header-height);
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0.5rem 1rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 0.4rem 1.5rem;
 }
 
 .brand {
@@ -56,19 +56,35 @@ import VueFeather from 'vue-feather'
 
 nav {
   display: flex;
-  gap: 0.25rem;
-  overflow-x: auto;
+  gap: 0.15rem;
+  flex-wrap: wrap;
 }
 
 nav a {
-  padding: 0.5rem 0.85rem;
+  padding: 0.45rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   white-space: nowrap;
   transition: background-color 0.15s, color 0.15s;
+}
+
+@media (max-width: 480px) {
+  .site-header-inner {
+    justify-content: center;
+  }
+
+  nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  nav a {
+    padding: 0.4rem 0.4rem;
+    font-size: 0.8rem;
+  }
 }
 
 nav a:hover {
